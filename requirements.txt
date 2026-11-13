@@ -1,0 +1,10 @@
+pandas
+geopandas
+osmnx
+shapely
+matplotlib
+seaborn
+folium
+mapclassify
+ruff
+ipykernel
