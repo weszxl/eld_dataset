@@ -56,7 +56,7 @@ eld_dataset/
    ```
    > Se instalar alguma biblioteca nova no seu ambiente, adicione o nome dela no `requirements.txt`.
 
-4. **Verificar a formatação do código:**
+4. **(opcional) Verificar a formatação do código:**
    ```bash
    ruff check .
    ```
