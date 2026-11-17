@@ -6,20 +6,36 @@ Scripts de coleta, limpeza e Análise Exploratória de Dados (EDA) para a criaç
 
 ## Objetivo Atual
 
-O foco desta etapa é validar a qualidade das fontes, documentar o histórico de limpeza dos dados e gerar o dataset que servirá de base.
+Validar a qualidade das fontes, documentar o histórico de limpeza dos dados e gerar o dataset que servirá de base para o projeto.
 
-## Escolha das Bibliotecas
+## Estrutura do Projeto
 
-* **OSMnx e Shapely:** Extraem a malha viária, a infraestrutura cicloviária atual e os pontos de interesse diretamente do OpenStreetMap, permitindo calcular distâncias espaciais entre bairros e serviços.
-* **GeoPandas e Pandas:** Realizam o cruzamento geográfico (como unir ruas aos setores censitários do IBGE e dados abertos da prefeitura), o tratamento de valores nulos e a estruturação da tabela do dataset.
-* **Matplotlib, Seaborn e Folium:** Geram gráficos estatísticos e mapas interativos para a Análise Exploratória de Dados (EDA), permitindo inspecionar visualmente a distribuição das variáveis na cidade.
-* **uv, Ruff e `.gitignore`:** O `uv` gerencia o ambiente Python e os pacotes, enquanto o `Ruff` garante a padronização e qualidade do código nos scripts de extração e limpeza. Os arquivos pesados de dados brutos são ignorados no controle de versão.
+```text
+eld_dataset/
+├── data/                     # (Local — não commitado) Criar manualmente
+│   ├── 1_raw/                # Dados brutos
+│   ├── 2_processing/         # Dados em tratamento
+│   └── 3_done/               # Dados prontos
+├── notebooks/                # Notebooks por pilar (ex: 02_access_inclusion.ipynb)
+├── src/                      # Scripts de coleta de dados e utilitários
+├── tests/                    # Testes de código e funcionalidades
+└── requirements.txt          # Bibliotecas Python do projeto
+```
+
+* **`data/`:** está no `.gitignore` e não é commitado. A estrutura `1_raw/`, `2_processing/` e `3_done/` é uma sugestão de organização e deve ser criada localmente por cada pessoa.
+* **`notebooks/`:** cada integrante cria seu notebook conforme o pilar escolhido (exemplo: `02_access_inclusion.ipynb`).
+* **`src/`:** scripts usados para puxar dados ou outras rotinas do projeto.
+* **`tests/`:** diretório para testar qualquer script ou funcionalidade.
 
 ## Rodar o Ambiente
 
-1. **Criaçao do env na pasta raiz:**
+1. **Criar o ambiente virtual na pasta raiz:**
    ```bash
-   uv venv
+   # Linux ou macOS
+   python3 -m venv .venv
+
+   # Windows
+   python -m venv .venv
    ```
 
 2. **Ativar o ambiente:**
@@ -27,14 +43,18 @@ O foco desta etapa é validar a qualidade das fontes, documentar o histórico de
    # Linux ou macOS
    source .venv/bin/activate
 
-   # Windows
+   # Windows (CMD)
    .venv\Scripts\activate
+
+   # Windows (PowerShell)
+   .venv\Scripts\Activate.ps1
    ```
 
 3. **Instalar as bibliotecas:**
    ```bash
-   uv pip install -r requirements.txt
+   pip install -r requirements.txt
    ```
+   > Se instalar alguma biblioteca nova no seu ambiente, adicione o nome dela no `requirements.txt`.
 
 4. **Verificar a formatação do código:**
    ```bash
