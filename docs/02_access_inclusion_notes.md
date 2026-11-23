@@ -31,6 +31,8 @@ Levantamento dos dicionários e schemas reais em `data/1_raw/` antes do processa
 | Renda do Responsável | `V06004` | Rendimento nominal médio mensal | Apenas responsáveis **com rendimentos** (exclui renda zero); CSV usa **ponto** decimal |
 | Renda do Responsável | `V06006` | Rendimento nominal mediano mensal | Apenas responsáveis **com rendimentos**; menos sensível a outliers |
 
+**Contagem de responsáveis com/sem rendimento:** o dicionário `dicionario_de_dados_renda_responsavel_20260508.xlsx` possui apenas 6 variáveis e não traz uma contagem separada de responsáveis com rendimento ou sem rendimento. `V06001` conta todos os responsáveis em domicílios particulares permanentes ocupados; `V06004`, `V06005` e `V06006` são indicadores apenas das pessoas responsáveis com rendimentos. Portanto, não existe neste dicionário um código direto para calcular a parcela com renda zero; essa estimativa exigiria outra base ou regra derivada que não está documentada aqui.
+
 ### Sigilo, omissões e cuidados na junção
 - **Sigilo estatístico:** representado por **`"X"`** (`3.116` ocorrências em `demografia` e `108` em `renda` para POA) -> converter para `NaN` antes de tipar como numérico.
 - **Setores sem moradores (`v0001 == 0`):** aparecem com `0` no `basico`, mas **não têm linha** em `demografia` e `renda` (`2.744` setores no `basico` vs. `2.713` em `demografia`/`renda` em POA).
@@ -83,3 +85,32 @@ Levantamento dos dicionários e schemas reais em `data/1_raw/` antes do processa
    - Filtrar só `CO_NATUREZA_JUR` `1xxx` excluiria o Hospital Conceição (`2011`) e filantrópicos conveniados ao SUS como Santa Casa (`3069`) e Divina Providência (`3999`).
    - Revisar pontualmente exceções (ex.: unidades militares `HBMPA` / campanhas temporárias) e manter flag de atendimento SUS caso se decida comparar rede SUS vs. total hospitalar.
 
+**Atendimento hospitalar no dicionário CNES:** o `DICIONARIO_DE_DADOS.docx` confirma uma coluna específica hospitalar SUS, `CO_HOSPITALAR_SUS`, além de `CO_HOSPITALAR` para atendimento hospitalar não SUS e `CO_AMBULATORIAL_SUS` para atendimento ambulatorial SUS. O CSV aberto não traz `CO_HOSPITALAR_SUS`; ele contém `ST_ATEND_HOSPITALAR` e `CO_AMBULATORIAL_SUS`. Assim, para identificar vínculo SUS ambulatorial, a regra atual continua baseada em `CO_AMBULATORIAL_SUS == "SIM"` combinada com natureza jurídica pública; `ST_ATEND_HOSPITALAR` só identifica existência de atendimento hospitalar, não vínculo exclusivo com o SUS.
+
+---
+
+## 4. Esquemas das Bases Complementares Restantes
+
+### Escolas
+
+- Fonte: `Análise - Tabela da lista das escolas - Detalhado.csv`.
+- A base possui 988 linhas e todos os registros são de **`Município == "Porto Alegre"`**, UF **RS**.
+- Município: `Município`; a própria base já confirma que não há registros de outros municípios.
+- Situação de funcionamento: a coluna `Restrição de Atendimento` contém 941 escolas em funcionamento sem restrição, 33 paralisadas e 14 que atendem exclusivamente alunos com deficiência. Não há uma categoria explícita chamada "extinta"; para excluir estabelecimentos encerrados, paralisadas devem ser tratadas como não ativas até haver uma regra mais específica.
+- Rede: `Categoria Administrativa` informa 636 escolas privadas e 352 públicas; `Dependência Administrativa` detalha 636 privadas, 246 estaduais, 101 municipais e 5 federais.
+- Coordenadas: `Latitude` e `Longitude`, ambas preenchidas em todas as 988 linhas.
+
+### Assistência Social
+
+- O `.csv` possui 35 linhas e cinco colunas: `categoria`, `nome`, `endereco`, `latitude`, `longitude`.
+- O `.gpkg` possui 35 linhas e a mesma tabela mais `geometry`, na camada `assistencia_social_poa_100_oficial`, CRS `EPSG:4674`.
+- Os cinco atributos comuns possuem os mesmos valores em ambos os formatos. O `.csv` é a versão tabular sem a geometria.
+- A coluna que identifica o tipo de equipamento é `categoria`: 23 CRAS, 9 CREAS e 3 Centro POP.
+- Coordenadas estão em `latitude` e `longitude` no `.csv`; no `.gpkg`, a mesma localização está em `geometry`, com os valores também presentes como atributos.
+
+### Favelas / FCUs
+
+- Pasta: `poligonos_FCUs_shp`.
+- Os arquivos auxiliares estão presentes: `.shp`, `.shx`, `.dbf`, `.prj` e `.cpg`.
+- A leitura foi bem-sucedida com GeoPandas/pyogrio: 12.348 feições, CRS `EPSG:4674`.
+- Colunas principais observadas: `cd_fcu`, `nm_fcu`, `cd_uf`, `nm_uf`, `sigla_uf`, `cd_mun`, `nm_mun` e `geometry`.
