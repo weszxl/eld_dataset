@@ -148,3 +148,79 @@ Levantamento dos dicionários e schemas reais em `data/1_raw/` antes do processa
 - A leitura foi bem-sucedida com GeoPandas/pyogrio: 12.348 feições no Brasil (`125` feições e `125` `cd_fcu` únicos em Porto Alegre), CRS `EPSG:4674`.
 - Colunas principais observadas: `cd_fcu`, `nm_fcu`, `cd_uf`, `nm_uf`, `sigla_uf`, `cd_mun`, `nm_mun` e `geometry`.
 - **Redundância com `RS_setores_CD2022.gpkg`:** os `125` `cd_fcu` de `fcu_poa` coincidem 100% (`0` exclusivos em cada lado) com os `125` `CD_FCU` válidos presentes nos `323` setores com `CD_TIPO == "1"` de `setores_poa`. Para análises por setor, a flag `is_fcu` já pode ser derivada direto do `.gpkg` sem spatial join; o shapefile fica apenas como camada opcional para plotar os contornos agregados das 125 comunidades.
+
+---
+
+## 5. Auditoria Somente Leitura das Três Bases de Pontos
+
+Esta auditoria foi executada no notebook sem remover registros, criar bases limpas ou salvar resultados intermediários.
+
+### CNES
+
+- Funil em Porto Alegre: `10.294` unidades totais -> `9.203` ativas -> `225` ativas nos tipos selecionados -> `200` no recorte combinado SUS/público -> `183` após as `17` exclusões explícitas.
+- Tipos selecionados: `1`, `2`, `4`, `5`, `7`, `20`, `21`, `70` e `73`.
+- Regra combinada do recorte final: `CO_AMBULATORIAL_SUS == "SIM"` ou natureza jurídica pública (`1xxx` ou `2011`).
+- O teste espacial usa `index=cnes_final.index` e encontrou `1` unidade fora do contorno: `CAPSI III LESTE`, `CO_CNES = 8604428`, `TP_UNIDADE = "70"`, coordenada `(-30.0619309, -50.1557879)`.
+- Nenhuma unidade do recorte final ficou sem latitude/longitude válida.
+- Foram decididas `17` exclusões explícitas do CNES:
+  - `8604428` — `CAPSI III LESTE`
+  - `7355106` — `CASE II`
+  - `7355122` — `CASEF`
+  - `7533446` — `CONSULTORIO NA RUA GHC`
+  - `7355114` — `CSE COMUNIDADE SOCIO EDUCATIVA`
+  - `2237156` — `HBMPA`
+  - `7989954` — `HOSPITAL GERAL DE PORTO ALEGRE`
+  - `8083649` — `POLICLINICA`
+  - `915742` — `POLICLINICA MILITAR DE PORTO ALEGRE`
+  - `4758749` — `PRONTO ATENDIMENTO DE CAMPANHA BOM JESUS`
+  - `6957560` — `SAUDE PRISIONAL CPPA`
+  - `9948007` — `SAUDE PRISIONAL IPF MAURICIO CARDOSO`
+  - `6957544` — `SAUDE PRISIONAL MADRE PELLETIER`
+  - `4560191` — `SAUDE PRISIONAL NUGESP`
+  - `804959` — `SAUDE PRISIONAL PEPOA`
+  - `9827153` — `SERVICO RESIDENCIAL TERAPEUTICO SRT 5 NISE DA SILVEIRA`
+  - `9736271` — `SERVICO RESIDENCIAL TERAPEUTICO SRT 7 LAR DA AMIZADE`
+- Dos `21` hospitais mantidos, `8` são públicos (`1xxx`/`2011`) e `13` são privados ou filantrópicos conveniados ao SUS (`3xxx`). Os hospitais privados/filantrópicos receberão uma flag separada e não serão descartados automaticamente.
+
+### Escolas
+
+- A base contém `19` colunas. Há explicitamente uma coluna de etapas/modalidades (`Etapas e Modalidade de Ensino Oferecidas`) e o endereço completo em `Endereço`.
+- O filtro ativo é apenas `~str.contains("PARALISADA")`; ele exclui somente registros paralisados e recupera as `14` escolas de educação especial.
+- O recorte ajustado contém `955` escolas não paralisadas:
+  - Pública: `346` escolas, das quais `313` têm coordenada válida e `33` têm coordenada em branco.
+  - Privada conveniada: `227` escolas, das quais `215` têm coordenada válida e `12` têm coordenada em branco.
+  - Privada particular: `382` escolas, das quais `281` têm coordenada válida e `101` têm coordenada em branco.
+- Total georreferenciado: `809` escolas (`313` públicas + `215` privadas conveniadas + `281` privadas particulares). Permanecem fora das análises espaciais `146` escolas sem coordenada (`33` públicas + `12` privadas conveniadas + `101` privadas particulares).
+- A limitação de prazo documentada é não geocodificar as escolas sem coordenada; as `33` públicas ficam desconsideradas das análises espaciais que dependem de pontos, assim como as `12` privadas conveniadas.
+- A **EMEF SAO PEDRO** é mantida no conjunto limpo; o cálculo em `EPSG:31982` coloca o ponto a `1,48 m` do limite municipal.
+- A tabela de escolas gera as flags `Pública`, `Privada Conveniada`, `Privada Particular`, `is_educacao_infantil`, `is_apenas_educacao_infantil` e `is_educacao_especial`. `is_educacao_infantil` indica que a etapa é oferecida; `is_apenas_educacao_infantil` é `True` somente quando o texto da etapa é exatamente `"Educação Infantil"`.
+
+### Decisões finais do recorte
+
+- **CNES:** aplicar a lista explícita das `17` exclusões por `CO_CNES` registrada nesta seção, obtendo `183` unidades finais. Hospitais privados com `CO_AMBULATORIAL_SUS == "SIM"` permanecem no recorte e são identificados pela coluna `tipo_hospital_sus`.
+- **Escolas:** considerar todas as `955` escolas não paralisadas: `346` públicas, `227` privadas conveniadas e `382` privadas particulares. O conjunto mantém educação especial e educação infantil.
+- **Flags educacionais:** gerar `Pública`, `Privada Conveniada`, `Privada Particular`, `is_educacao_infantil`, `is_apenas_educacao_infantil` e `is_educacao_especial`; não excluir educação infantil ou educação especial do recorte geral.
+- **Geocodificação:** não geocodificar agora as `33` escolas públicas com coordenada em branco nem as `12` privadas conveniadas sem coordenada. Por limitações de prazo, elas não entram nas análises espaciais que exigem ponto georreferenciado.
+
+### Assistência Social
+
+- Contagem por categoria: `23` CRAS, `9` CREAS e `3` Centro POP.
+- Todos os `35` equipamentos caem dentro do contorno de Porto Alegre.
+- Existe uma coordenada compartilhada por dois equipamentos no endereço Rua Barão do Amazonas, 1957, Partenon:
+  - `CRAS Partenon`
+  - `CREAS Partenon`
+- Não foram encontradas duplicatas de equipamento: a coincidência é uma duplicata de coordenada entre categorias diferentes no mesmo endereço oficial.
+
+---
+
+## 6. Limpeza e Exportação — Passo 4
+
+Os resultados finais foram exportados em `EPSG:4674` para `data/3_done/`:
+
+- `setores_poa_limpo.gpkg`: `2.730` setores após dissolve e exclusão dos `14` setores definidos. Contém `323` setores com `is_fcu == True` e `21` com `is_rural == True`. Schema salvo: `CD_SETOR`, `NM_BAIRRO`, `CD_SIT`, `CD_TIPO`, `CD_FCU`, `NM_FCU`, `v0001`, `AREA_KM2`, `densidade_hab_km2`, `idosos_60_mais`, `pct_idosos`, `V06001`, `V06004`, `V06006`, `is_fcu`, `is_rural` e `geometry`. Os valores `"."` em `CD_FCU` foram substituídos por `NaN`. `pct_idosos` usa escala `0–100`.
+- `cnes_poa_limpo.gpkg`: `183` pontos. Dos hospitais mantidos, `8` são públicos e `13` privados/filantrópicos conveniados ao SUS; a coluna `tipo_hospital_sus` usa `publico`, `privado_filantropico_sus` ou `outro`. Schema salvo: `CO_CNES`, `NO_FANTASIA`, `TP_UNIDADE`, `CO_NATUREZA_JUR`, `CO_AMBULATORIAL_SUS`, `tipo_hospital_sus` e `geometry`.
+- `escolas_poa_limpo.gpkg`: `809` pontos. Rede: `313` públicas, `215` privadas conveniadas e `281` privadas particulares. Contém `is_educacao_infantil`, `is_apenas_educacao_infantil` e `is_educacao_especial`; todas as `14` escolas especiais estão presentes. Schema salvo: `Código INEP`, `Escola`, `Categoria Administrativa`, `Dependência Administrativa`, `Conveniada Poder Público`, `Porte da Escola`, `Etapas e Modalidade de Ensino Oferecidas`, `rede_score`, `is_educacao_infantil`, `is_apenas_educacao_infantil`, `is_educacao_especial` e `geometry`.
+- `assistencia_poa_limpo.gpkg`: `35` pontos, com `23` CRAS, `9` CREAS e `3` Centro POP. Schema salvo: `categoria`, `nome`, `endereco`, `latitude`, `longitude` e `geometry`.
+- `fcu_poa_contornos.gpkg`: `125` polígonos de Porto Alegre. Schema salvo: `cd_fcu`, `nm_fcu` e `geometry`.
+
+A limpeza aplicou apenas as regras documentadas, preservou a `EMEF SAO PEDRO` e não criou geocodificação para as escolas sem coordenada.
