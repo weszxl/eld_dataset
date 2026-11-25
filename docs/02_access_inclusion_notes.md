@@ -197,7 +197,7 @@ Esta auditoria foi executada no notebook sem remover registros, criar bases limp
 
 ### Decisões finais do recorte
 
-- **CNES:** aplicar a lista explícita das `17` exclusões por `CO_CNES` registrada nesta seção, obtendo `183` unidades finais. Hospitais privados com `CO_AMBULATORIAL_SUS == "SIM"` permanecem no recorte e são identificados pela coluna `tipo_hospital_sus`.
+- **CNES:** aplicar a lista explícita das `17` exclusões por `CO_CNES` registrada nesta seção, obtendo `183` unidades finais. Hospitais privados/filantrópicos conveniados ao SUS (`3xxx` com `CO_AMBULATORIAL_SUS == "SIM"`) permanecem no recorte e são identificados pela coluna `tipo_hospital_sus`.
 - **Escolas:** considerar todas as `955` escolas não paralisadas: `346` públicas, `227` privadas conveniadas e `382` privadas particulares. O conjunto mantém educação especial e educação infantil.
 - **Flags educacionais:** gerar `Pública`, `Privada Conveniada`, `Privada Particular`, `is_educacao_infantil`, `is_apenas_educacao_infantil` e `is_educacao_especial`; não excluir educação infantil ou educação especial do recorte geral.
 - **Geocodificação:** não geocodificar agora as `33` escolas públicas com coordenada em branco nem as `12` privadas conveniadas sem coordenada. Por limitações de prazo, elas não entram nas análises espaciais que exigem ponto georreferenciado.
@@ -219,8 +219,15 @@ Os resultados finais foram exportados em `EPSG:4674` para `data/3_done/`:
 
 - `setores_poa_limpo.gpkg`: `2.730` setores após dissolve e exclusão dos `14` setores definidos. Contém `323` setores com `is_fcu == True` e `21` com `is_rural == True`. Schema salvo: `CD_SETOR`, `NM_BAIRRO`, `CD_SIT`, `CD_TIPO`, `CD_FCU`, `NM_FCU`, `v0001`, `AREA_KM2`, `densidade_hab_km2`, `idosos_60_mais`, `pct_idosos`, `V06001`, `V06004`, `V06006`, `is_fcu`, `is_rural` e `geometry`. Os valores `"."` em `CD_FCU` foram substituídos por `NaN`. `pct_idosos` usa escala `0–100`.
 - `cnes_poa_limpo.gpkg`: `183` pontos. Dos hospitais mantidos, `8` são públicos e `13` privados/filantrópicos conveniados ao SUS; a coluna `tipo_hospital_sus` usa `publico`, `privado_filantropico_sus` ou `outro`. Schema salvo: `CO_CNES`, `NO_FANTASIA`, `TP_UNIDADE`, `CO_NATUREZA_JUR`, `CO_AMBULATORIAL_SUS`, `tipo_hospital_sus` e `geometry`.
-- `escolas_poa_limpo.gpkg`: `809` pontos. Rede: `313` públicas, `215` privadas conveniadas e `281` privadas particulares. Contém `is_educacao_infantil`, `is_apenas_educacao_infantil` e `is_educacao_especial`; todas as `14` escolas especiais estão presentes. Schema salvo: `Código INEP`, `Escola`, `Categoria Administrativa`, `Dependência Administrativa`, `Conveniada Poder Público`, `Porte da Escola`, `Etapas e Modalidade de Ensino Oferecidas`, `rede_score`, `is_educacao_infantil`, `is_apenas_educacao_infantil`, `is_educacao_especial` e `geometry`.
+- `escolas_poa_limpo.gpkg`: `809` pontos. Rede: `313` públicas, `215` privadas conveniadas e `281` privadas particulares. Contém `is_educacao_infantil` (`539` `True`), `is_apenas_educacao_infantil` (`435` `True`, sem variações de grafia em `etapas_modalidades`) e `is_educacao_especial` (`14` `True`). Schema padronizado em `snake_case`: `codigo_inep`, `escola`, `categoria_administrativa`, `dependencia_administrativa`, `conveniada_poder_publico`, `porte_escola`, `etapas_modalidades`, `rede_score`, `is_educacao_infantil`, `is_apenas_educacao_infantil`, `is_educacao_especial` e `geometry`.
 - `assistencia_poa_limpo.gpkg`: `35` pontos, com `23` CRAS, `9` CREAS e `3` Centro POP. Schema salvo: `categoria`, `nome`, `endereco`, `latitude`, `longitude` e `geometry`.
 - `fcu_poa_contornos.gpkg`: `125` polígonos de Porto Alegre. Schema salvo: `cd_fcu`, `nm_fcu` e `geometry`.
 
 A limpeza aplicou apenas as regras documentadas, preservou a `EMEF SAO PEDRO` e não criou geocodificação para as escolas sem coordenada.
+
+### Validação de releitura no disco (`c15-releitura-gpkg`)
+
+Todos os 5 `.gpkg` em `data/3_done/` foram relidos com `gpd.read_file()`:
+- **Integridade espacial:** `0` geometrias vazias e `0` geometrias inválidas nas 5 camadas, todas em `EPSG:4674`.
+- **`setores_poa_limpo`:** `CD_FCU` e `NM_FCU` retornam como `str` com `2.407` nulos reais (`0` `"."` literais e `0` `"<NA>"` literais); `v0001` retorna em `int64` (`0` nulos); `is_fcu` e `is_rural` retornam em `bool` (`0` nulos); `idosos_60_mais` e `pct_idosos` retornam em `float64` (`74` nulos = `2,71%`, somando os `21` setores vazios e os mantidos com sigilo em `V01040`/`V01041`); `V06001`, `V06004` e `V06006` retornam em `float64` (`36` nulos = `1,32%`, sendo `21` vazios + `15` mantidos com sigilo `"X"`).
+- **Demais camadas (`cnes_poa_limpo`, `escolas_poa_limpo`, `assistencia_poa_limpo`, `fcu_poa_contornos`):** `0` nulos em todas as colunas e flags booleanas preservadas como `bool`.
